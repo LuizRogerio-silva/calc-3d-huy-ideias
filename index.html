@@ -185,6 +185,13 @@ option { background: #16181f; }
 .bi.hi  .bv { color: #00d4aa; font-size: 15px; }
 .bi.sep { border-top: 1px solid #2a2d3a; padding-top: 9px; margin-top: 2px; }
 
+.money { margin-top: 16px; padding-top: 14px; border-top: 1px solid #2a2d3a; }
+.money h3 { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #555; margin-bottom: 10px; }
+.mi { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; font-size: 13px; color: #aaa; margin-bottom: 8px; }
+.mi small { display: block; font-size: 10.5px; color: #666; }
+.mi b { color: #ddd; white-space: nowrap; }
+.mi.total { background: #00d4aa18; border: 1px solid #00d4aa55; border-radius: 7px; padding: 8px 10px; margin-top: 4px; }
+.mi.total span, .mi.total b { color: #00d4aa; font-weight: 700; font-size: 14px; }
 .platforms { margin-top: 18px; padding-top: 16px; border-top: 1px solid #2a2d3a; }
 .platforms h3 { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #444; margin-bottom: 10px; }
 .pi {
@@ -514,6 +521,16 @@ option { background: #16181f; }
       <div class="bi hi"><span class="bn">Lucro Líquido</span><span class="bv" id="r-lucro">—</span></div>
     </div>
 
+    <div class="money">
+      <h3>Para onde vai o dinheiro</h3>
+      <div class="mi"><span>💸 Gastos <small>(sai do caixa: filamento, energia, embalagem, tinta, licença/IA)</small></span><b id="m-gastos">—</b></div>
+      <div class="mi"><span>🏦 Reservas <small>(guardar: desgaste, consumíveis, custos fixos, falhas)</small></span><b id="m-reservas">—</b></div>
+      <div class="mi"><span>🛠️ Seu trabalho <small>(acabamento, pintura, modelagem)</small></span><b id="m-trabalho">—</b></div>
+      <div class="mi"><span>📈 Lucro do negócio</span><b id="m-lucro">—</b></div>
+      <div class="mi total"><span>Você recebe <small>(trabalho + lucro)</small></span><b id="m-recebe">—</b></div>
+      <div class="sub" id="m-check" style="margin-top:6px"></div>
+    </div>
+
     <div class="platforms">
       <h3>Por Plataforma</h3>
       <div class="pi"><span class="pn">🛒 Cliente Direto</span><span class="pp" id="r-direto">—</span></div>
@@ -627,10 +644,14 @@ function calcular(dados) {
     complexa: valor('CONSUMO_PINTURA_COMPLEXA_PCT', 20),
   };
   let custoPintura = 0;
+  let pinturaMat = 0;
+  let pinturaMdo = 0;
   if (pinturaTipo !== 'none') {
     const valorProdutosPintura = valor('TINTA_ACRILICA') + valor('PRIMER') + valor('VERNIZ');
     const materiaisPintura = valorProdutosPintura * ((percentuaisPintura[pinturaTipo] || 0) / 100);
     const maoDeObraPintura = pinturaHoras * (+dados.pintura_valor_hora || 0);
+    pinturaMat = materiaisPintura;
+    pinturaMdo = maoDeObraPintura;
     custoPintura = materiaisPintura + maoDeObraPintura;
   }
 
@@ -672,6 +693,11 @@ function calcular(dados) {
     mdo_imp: r2(mdoImp * quantidade),
     fixo_diss: r2(fixoDiss * quantidade),
     pintura: r2(custoPintura * quantidade),
+    // Para onde vai o dinheiro (pedido inteiro)
+    gastos: r2((material + energia + embalagem + taxaExtra + pinturaMat) * quantidade
+      + (dados.origem === 'modelado' ? modelagemFerramentas : projeto)),
+    reservas: r2((deprec + consumiveis + fixoDiss + risco) * quantidade),
+    trabalho: r2((mdoImp + pinturaMdo) * quantidade + modelagemMdo),
     taxa_extra: r2(taxaExtra * quantidade),
     risco: r2(risco * quantidade),
     projeto: r2(projeto),
@@ -720,6 +746,12 @@ function renderResult(d) {
     : 'Preenchido automaticamente pela quantidade (faixas em config.js). Pode ajustar para negociar.';
   id('r-custo').textContent       = fmtR(d.custo_total);
   id('r-lucro').textContent       = fmtR(d.lucro);
+  id('m-gastos').textContent   = fmtR(d.gastos);
+  id('m-reservas').textContent = fmtR(d.reservas);
+  id('m-trabalho').textContent = fmtR(d.trabalho);
+  id('m-lucro').textContent    = fmtR(d.lucro);
+  id('m-recebe').textContent   = fmtR(r2(d.trabalho + d.lucro));
+  id('m-check').textContent    = 'Soma = ' + fmtR(r2(d.gastos + d.reservas + d.trabalho + d.lucro)) + ' (valor do pedido para cliente direto)';
   id('r-direto').textContent      = fmtR(d.preco) + unitSuffix(d.preco_unitario, d.quantidade);
   id('r-shopee').textContent      = fmtR(d.shopee) + unitSuffix(d.shopee_unitario, d.quantidade);
   id('r-ml').textContent          = fmtR(d.ml) + unitSuffix(d.ml_unitario, d.quantidade);
@@ -976,6 +1008,13 @@ function controlText() {
     'Mercado Livre - unidade: ' + fmtR(lastResult.ml_unitario),
     ...(lastResult.desconto > 0 ? ['Desconto concedido: ' + fmtR(lastResult.desconto)] : []),
     'Lucro estimado: ' + fmtR(lastResult.lucro),
+    '',
+    'PARA ONDE VAI O DINHEIRO',
+    'Gastos (sai do caixa): ' + fmtR(lastResult.gastos),
+    'Reservas (guardar): ' + fmtR(lastResult.reservas),
+    'Seu trabalho: ' + fmtR(lastResult.trabalho),
+    'Lucro do negócio: ' + fmtR(lastResult.lucro),
+    'Você recebe (trabalho + lucro): ' + fmtR(r2(lastResult.trabalho + lastResult.lucro)),
     'Margem (impressão): ' + margem + '%',
     '',
   ].join('\r\n');
