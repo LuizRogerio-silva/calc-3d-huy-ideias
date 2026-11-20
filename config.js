@@ -1,6 +1,6 @@
 const CONFIG = {
   ALUGUEL: 100,
-  ASSINATURAS_SOFTWARES: 100,
+  ASSINATURAS_SOFTWARES: 0,
   PLATAFORMAS_ECOMMERCE: 0,
   TAXA_MEI: 0,
   PUBLICIDADE_MINIMA_FIXA: 100,
@@ -15,14 +15,20 @@ const CONFIG = {
   CONSUMO_PINTURA_SIMPLES_PCT: 5,
   CONSUMO_PINTURA_MEDIA_PCT: 10,
   CONSUMO_PINTURA_COMPLEXA_PCT: 20,
-  MAO_DE_OBRA_PINTURA_POR_HORA: 10,
+  MAO_DE_OBRA_PINTURA_POR_HORA: 10,  // mesmo valor do acabamento (não é pintura profissional)
 
   // MODELAGEM 3D (cobrada uma vez por pedido, sem markup)
-  VALOR_HORA_MODELAGEM: 30,
-  // Soma das assinaturas usadas para modelar (ChatGPT, Claude, Tripo3D...)
-  FERRAMENTAS_IA_MENSAL: 0,
-  // Quantas horas por mês você costuma modelar (para dividir as assinaturas)
-  HORAS_MODELAGEM_MENSAIS: 40,
+  // Valores iniciais; podem ser alterados na tela a cada orçamento
+  VALOR_HORA_MODELAGEM: 20,
+  TAXA_FERRAMENTAS_IA_POR_PROJETO: 20,  // ChatGPT + Tripo3D
+  HORAS_MODELAGEM_SIMPLES: 1,
+  HORAS_MODELAGEM_MEDIA: 3,
+  HORAS_MODELAGEM_COMPLEXA: 6,
+
+  // Horas de pintura sugeridas por nível
+  HORAS_PINTURA_SIMPLES: 0.5,
+  HORAS_PINTURA_MEDIA: 1,
+  HORAS_PINTURA_COMPLEXA: 2,
 
   RISCO_FALHAS_PCT: 10,
 

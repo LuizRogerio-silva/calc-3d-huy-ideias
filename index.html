@@ -143,6 +143,8 @@ option { background: #16181f; }
   cursor: pointer; font-size: 12px; font-weight: 600; text-align: center;
   transition: all .2s;
 }
+.tipo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+.tipo-grid .tbtn { padding: 10px 6px; }
 .tbtn.active { background: #00d4aa22; border-color: #00d4aa; color: #00d4aa; }
 
 /* ── SEÇÃO ── */
@@ -212,6 +214,11 @@ option { background: #16181f; }
 }
 .budget-box h3 { color: #111; margin-bottom: 12px; }
 .budget-logo { display: block; width: 180px; max-width: 60%; margin: 0 auto 16px; }
+.budget-sec { margin-top: 14px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: #00a888; }
+.budget-list { margin: 6px 0 0 18px; }
+.budget-list li { margin-bottom: 3px; }
+.budget-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #ddd; padding: 3px 0; }
+.budget-note { margin-top: 10px; padding: 8px 10px; background: #eefaf6; border-left: 3px solid #00d4aa; border-radius: 4px; font-size: 13px; }
 .budget-box .budget-total { font-size: 22px; font-weight: 700; margin-top: 12px; }
 
 /* ── MODAL CONFIG ── */
@@ -303,16 +310,16 @@ option { background: #16181f; }
     <!-- Produto básico -->
     <div class="grid3">
       <div class="field">
-        <label>Tempo por Unidade</label>
+        <label>Tempo por Unidade (como no Bambu)</label>
         <div class="iw">
-          <input type="number" id="tempo" value="5" min="0" step="0.5" oninput="calc()">
-          <div class="sfx">h</div>
+          <input type="text" id="tempo" value="2h19m" placeholder="ex: 2h19m" inputmode="text" oninput="calc()">
+          <div class="sfx" id="tempo_hint">h</div>
         </div>
       </div>
       <div class="field">
         <label>Peso por Unidade</label>
         <div class="iw">
-          <input type="number" id="peso" value="35" min="0" oninput="calc()">
+          <input type="text" id="peso" value="32,05" placeholder="ex: 32,05" inputmode="decimal" oninput="calc()">
           <div class="sfx">g</div>
         </div>
       </div>
@@ -339,53 +346,100 @@ option { background: #16181f; }
       </div>
     </div>
 
-    <!-- Origem do modelo -->
+    <!-- Tipo de produto -->
     <div class="section">
-      <div class="section-lbl">Origem do Modelo</div>
-      <div class="toggle-row" id="otoggle">
-        <div class="tbtn active" data-val="baixado"  onclick="setOrigem(this)">Baixado (MakerWorld etc.)</div>
-        <div class="tbtn"        data-val="modelado" onclick="setOrigem(this)">Modelado por mim</div>
+      <div class="section-lbl">Tipo de Produto</div>
+      <div class="tipo-grid" id="ttoggle">
+        <div class="tbtn"        data-val="mod_pint" onclick="setTipo(this)">Sob encomenda + Impressão + Pintura</div>
+        <div class="tbtn"        data-val="mod_imp"  onclick="setTipo(this)">Sob encomenda + Impressão</div>
+        <div class="tbtn active" data-val="bai_imp"  onclick="setTipo(this)">Modelo pronto + Impressão</div>
+        <div class="tbtn"        data-val="bai_pint" onclick="setTipo(this)">Modelo pronto + Impressão + Pintura</div>
       </div>
+
+      <!-- Baixado -->
       <div id="origem-baixado">
         <div class="field">
-          <label>Custo do Arquivo / Licença (por pedido)</label>
+          <label>Custo do Arquivo / Licença / Parte da Modelagem (por pedido)</label>
           <div class="iw">
             <div class="pfx">R$</div>
             <input type="number" id="arquivo_custo" value="0" min="0" step="1" oninput="calc()">
           </div>
         </div>
+        <div class="sub" style="margin-top:6px">Modelo pronto = baixado (MakerWorld etc.) ou criado por você antes. Grátis ou já pago = 0; se quiser recuperar a modelagem aos poucos, coloque R$ 10 a R$ 20. Em arquivo baixado, confira se a licença permite venda.</div>
       </div>
+
+      <!-- Modelado -->
       <div id="origem-modelado" style="display:none">
-        <div class="grid2">
+        <div class="field" style="margin-bottom:8px"><label>Nível da Modelagem</label></div>
+        <div class="toggle-row" id="mtoggle">
+          <div class="tbtn active" data-val="simples"  onclick="setModelagem(this)">Simples</div>
+          <div class="tbtn"        data-val="media"    onclick="setModelagem(this)">Média</div>
+          <div class="tbtn"        data-val="complexa" onclick="setModelagem(this)">Complexa</div>
+        </div>
+        <div class="grid3">
           <div class="field">
-            <label>Horas de Modelagem (por pedido)</label>
+            <label>Horas de Modelagem</label>
             <div class="iw">
-              <input type="number" id="modelagem_horas" value="2" min="0" step="0.5" oninput="calc()">
+              <input type="text" id="modelagem_horas" value="1" inputmode="decimal" oninput="calc()">
               <div class="sfx">h</div>
             </div>
           </div>
           <div class="field">
-            <label>Créditos de IA neste projeto</label>
+            <label>Valor da Hora</label>
             <div class="iw">
               <div class="pfx">R$</div>
-              <input type="number" id="ia_extra" value="0" min="0" step="1" oninput="calc()">
+              <input type="text" id="modelagem_valor_hora" value="20" inputmode="decimal" oninput="calc()">
+            </div>
+          </div>
+          <div class="field">
+            <label>Taxa Ferramentas IA</label>
+            <div class="iw">
+              <div class="pfx">R$</div>
+              <input type="text" id="ia_taxa" value="20" inputmode="decimal" oninput="calc()">
             </div>
           </div>
         </div>
+        <div class="sub" style="margin-top:6px">
+          Modelo criado do zero para um cliente. Por pedido, sem markup: horas × valor da hora + taxa de ferramentas (ChatGPT, Tripo3D). O nível só sugere as horas.
+        </div>
       </div>
-      <div class="sub" style="margin-top:8px">
-        Cobrado uma vez por pedido, sem markup. Valor da hora e assinaturas de IA em config.js.
+
+      <!-- Pintura -->
+      <div id="pintura-bloco" style="display:none;margin-top:14px">
+        <div class="field" style="margin-bottom:8px"><label>Nível da Pintura</label></div>
+        <div class="toggle-row" id="ptoggle">
+          <div class="tbtn active" data-val="simples"  onclick="setPintura(this)">Simples</div>
+          <div class="tbtn"        data-val="media"    onclick="setPintura(this)">Média</div>
+          <div class="tbtn"        data-val="complexa" onclick="setPintura(this)">Complexa</div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Horas de Pintura por Unidade</label>
+            <div class="iw">
+              <input type="text" id="pintura_horas" value="0.5" inputmode="decimal" oninput="calc()">
+              <div class="sfx">h</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Valor da Hora de Pintura</label>
+            <div class="iw">
+              <div class="pfx">R$</div>
+              <input type="text" id="pintura_valor_hora" value="10" inputmode="decimal" oninput="calc()">
+            </div>
+          </div>
+        </div>
+        <div class="sub" style="margin-top:6px">O nível sugere as horas e a quantidade de tinta (acrílica, primer, verniz).</div>
       </div>
     </div>
 
-    <!-- Mão de obra impressão -->
+    <!-- Mão de obra acabamento -->
     <div class="section">
-      <div class="section-lbl">Mão de Obra — Impressão</div>
+      <div class="section-lbl">Mão de Obra — Acabamento (limpeza de suporte, lixamento)</div>
       <div class="grid2">
         <div class="field">
-          <label>Horas de Trabalho por Unidade</label>
+          <label>Horas de Acabamento por Unidade</label>
           <div class="iw">
-            <input type="number" id="mdo_horas" value="0.5" min="0" step="0.25" oninput="calc()">
+            <input type="number" id="mdo_horas" value="0.25" min="0" step="0.25" oninput="calc()">
             <div class="sfx">h</div>
           </div>
         </div>
@@ -393,27 +447,7 @@ option { background: #16181f; }
           <label>Valor por Hora</label>
           <div class="iw">
             <div class="pfx">R$</div>
-            <input type="number" id="mdo_valor" value="15" min="0" step="1" oninput="calc()">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pintura -->
-    <div class="section">
-      <div class="section-lbl">Pintura</div>
-      <div class="toggle-row" id="ptoggle">
-        <div class="tbtn active" data-val="none"     onclick="setPintura(this)">Sem Pintura</div>
-        <div class="tbtn"        data-val="simples"  onclick="setPintura(this)">Simples</div>
-        <div class="tbtn"        data-val="media"    onclick="setPintura(this)">Média</div>
-        <div class="tbtn"        data-val="complexa" onclick="setPintura(this)">Complexa</div>
-      </div>
-      <div id="pintura-campos" style="display:none">
-        <div class="field">
-          <label>Horas de Pintura por Unidade</label>
-          <div class="iw">
-            <input type="number" id="pintura_horas" value="1" min="0" step="0.25" oninput="calc()">
-            <div class="sfx">h</div>
+            <input type="number" id="mdo_valor" value="10" min="0" step="1" oninput="calc()">
           </div>
         </div>
       </div>
@@ -457,7 +491,7 @@ option { background: #16181f; }
       <div class="bi"><span class="bn">Depreciação</span><span class="bv" id="r-deprec">—</span></div>
       <div class="bi"><span class="bn">Consumíveis</span><span class="bv" id="r-consumiveis">—</span></div>
       <div class="bi"><span class="bn">Embalagem</span><span class="bv" id="r-embalagem">—</span></div>
-      <div class="bi"><span class="bn">Mão de obra</span><span class="bv" id="r-mdo">—</span></div>
+      <div class="bi"><span class="bn">Acabamento</span><span class="bv" id="r-mdo">—</span></div>
       <div class="bi"><span class="bn">Custo fixo dissolvido</span><span class="bv" id="r-fixo">—</span></div>
       <div class="bi" id="r-pintura-row" style="display:none">
         <span class="bn">Pintura</span><span class="bv" id="r-pintura">—</span>
@@ -512,20 +546,22 @@ function calc() {
 function doCalc() {
   const payload = {
     quantidade:  +id('quantidade').value  || 1,
-    peso:        +id('peso').value        || 0,
-    tempo:       +id('tempo').value       || 0,
+    peso:        parseNum(id('peso').value),
+    tempo:       parseTempo(id('tempo').value),
     filamento_kg:+id('filamento_kg').value|| 0,
     embalagem:   +id('embalagem').value   || 0,
     mdo_horas:   +id('mdo_horas').value   || 0,
     mdo_valor:   +id('mdo_valor').value   || 0,
     pintura,
-    pintura_horas:+id('pintura_horas').value || 0,
+    pintura_horas: parseNum(id('pintura_horas').value),
+    pintura_valor_hora: parseNum(id('pintura_valor_hora').value),
     markup:      +id('markup').value      || 1,
     taxa_extra:  +id('taxa_extra').value  || 0,
     origem,
-    arquivo_custo:   +id('arquivo_custo').value   || 0,
-    modelagem_horas: +id('modelagem_horas').value || 0,
-    ia_extra:        +id('ia_extra').value        || 0,
+    arquivo_custo:   parseNum(id('arquivo_custo').value),
+    modelagem_horas: parseNum(id('modelagem_horas').value),
+    modelagem_valor_hora: parseNum(id('modelagem_valor_hora').value),
+    ia_taxa:         parseNum(id('ia_taxa').value),
   };
 
   renderResult(calcular(payload));
@@ -584,7 +620,7 @@ function calcular(dados) {
   if (pinturaTipo !== 'none') {
     const valorProdutosPintura = valor('TINTA_ACRILICA') + valor('PRIMER') + valor('VERNIZ');
     const materiaisPintura = valorProdutosPintura * ((percentuaisPintura[pinturaTipo] || 0) / 100);
-    const maoDeObraPintura = pinturaHoras * valor('MAO_DE_OBRA_PINTURA_POR_HORA', 30);
+    const maoDeObraPintura = pinturaHoras * (+dados.pintura_valor_hora || 0);
     custoPintura = materiaisPintura + maoDeObraPintura;
   }
 
@@ -601,11 +637,8 @@ function calcular(dados) {
   let modelagemMdo = 0;
   let modelagemFerramentas = 0;
   if (dados.origem === 'modelado') {
-    const horasModelagem = +dados.modelagem_horas || 0;
-    const horasMesModelagem = valor('HORAS_MODELAGEM_MENSAIS', 40) || 1;
-    modelagemMdo = horasModelagem * valor('VALOR_HORA_MODELAGEM', 30);
-    modelagemFerramentas = horasModelagem * (valor('FERRAMENTAS_IA_MENSAL', 0) / horasMesModelagem)
-      + (+dados.ia_extra || 0);
+    modelagemMdo = (+dados.modelagem_horas || 0) * (+dados.modelagem_valor_hora || 0);
+    modelagemFerramentas = +dados.ia_taxa || 0;
     projeto = modelagemMdo + modelagemFerramentas;
   } else {
     projeto = +dados.arquivo_custo || 0;
@@ -638,6 +671,7 @@ function calcular(dados) {
     ml: r2(mlTotal),
     quantidade,
     preco_unitario: r2(precoTotal / quantidade),
+    preco_peca: r2(precoUnit),
     shopee_unitario: r2(shopeeTotal / quantidade),
     ml_unitario: r2(mlTotal / quantidade),
   };
@@ -645,6 +679,7 @@ function calcular(dados) {
 
 function renderResult(d) {
   lastResult = d;
+  id('tempo_hint').textContent = '= ' + fmtNumber(parseTempo(id('tempo').value)) + ' h';
   const nome = id('nome').value || '—';
   id('r-nome').textContent    = nome;
   id('r-preco').textContent   = fmt(d.preco);
@@ -673,26 +708,50 @@ function renderResult(d) {
 
   id('r-pintura-row').style.display = pintura !== 'none' ? 'flex' : 'none';
   id('r-projeto').textContent = fmtR(d.projeto);
-  id('r-projeto-lbl').textContent = d.origem === 'modelado' ? 'Modelagem 3D' : 'Arquivo / Licença';
+  id('r-projeto-lbl').textContent = d.origem === 'modelado' ? 'Modelagem sob encomenda' : 'Arquivo / Licença';
   id('r-projeto-row').style.display = (d.origem === 'modelado' || d.projeto > 0) ? 'flex' : 'none';
 }
 
-// ── Origem do modelo ──────────────────────────────────────────
-function setOrigem(el) {
-  document.querySelectorAll('#otoggle .tbtn').forEach(b => b.classList.remove('active'));
+// ── Tipo de produto e pintura ─────────────────────────────────
+const HORAS_PINTURA_SUGERIDAS = {
+  simples: valor('HORAS_PINTURA_SIMPLES', 0.5),
+  media: valor('HORAS_PINTURA_MEDIA', 1),
+  complexa: valor('HORAS_PINTURA_COMPLEXA', 2),
+};
+const HORAS_MODELAGEM_SUGERIDAS = {
+  simples: valor('HORAS_MODELAGEM_SIMPLES', 1),
+  media: valor('HORAS_MODELAGEM_MEDIA', 3),
+  complexa: valor('HORAS_MODELAGEM_COMPLEXA', 6),
+};
+let nivelPintura = 'simples';
+let nivelModelagem = 'simples';
+
+function setModelagem(el) {
+  document.querySelectorAll('#mtoggle .tbtn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  origem = el.dataset.val;
-  id('origem-baixado').style.display = origem === 'baixado' ? 'block' : 'none';
-  id('origem-modelado').style.display = origem === 'modelado' ? 'block' : 'none';
+  nivelModelagem = el.dataset.val;
+  id('modelagem_horas').value = String(HORAS_MODELAGEM_SUGERIDAS[nivelModelagem]).replace('.', ',');
   calc();
 }
 
-// ── Pintura ───────────────────────────────────────────────────
+function setTipo(el) {
+  document.querySelectorAll('#ttoggle .tbtn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const tipo = el.dataset.val;
+  origem = tipo.startsWith('mod') ? 'modelado' : 'baixado';
+  pintura = tipo.endsWith('pint') ? nivelPintura : 'none';
+  id('origem-baixado').style.display = origem === 'baixado' ? 'block' : 'none';
+  id('origem-modelado').style.display = origem === 'modelado' ? 'block' : 'none';
+  id('pintura-bloco').style.display = pintura !== 'none' ? 'block' : 'none';
+  calc();
+}
+
 function setPintura(el) {
   document.querySelectorAll('#ptoggle .tbtn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  pintura = el.dataset.val;
-  id('pintura-campos').style.display = pintura !== 'none' ? 'block' : 'none';
+  nivelPintura = el.dataset.val;
+  pintura = nivelPintura;
+  id('pintura_horas').value = String(HORAS_PINTURA_SUGERIDAS[nivelPintura]).replace('.', ',');
   calc();
 }
 
@@ -701,29 +760,64 @@ const VALOR_TRABALHO_FRASE = 'Peça impressa em 3D artesanalmente, com acabament
 
 function budgetData() {
   if (!lastResult) return null;
+  const modelado = lastResult.origem === 'modelado';
+  const q = lastResult.quantidade;
+  // Na sob encomenda a modelagem aparece separada (pagamento único)
+  const valorPeca = modelado ? lastResult.preco_peca : lastResult.preco_unitario;
   return {
     cliente: id('cliente').value.trim() || 'Cliente',
     produto: id('nome').value.trim() || 'Produto personalizado',
-    quantidade: lastResult.quantidade,
+    quantidade: q,
     total: lastResult.preco,
-    unitario: lastResult.preco_unitario,
+    valorPeca,
+    subtotalPecas: modelado ? r2(lastResult.preco_peca * q) : lastResult.preco,
+    modelagem: modelado ? lastResult.projeto : 0,
     pintura: pintura === 'none' ? '' : pintura,
-    modelado: lastResult.origem === 'modelado',
+    modelado,
+    nivelModelagem,
+    tempoPeca: fmtTempo(parseTempo(id('tempo').value)),
+    acabamento: parseNum(id('mdo_horas').value) > 0,
+    embalagem: parseNum(id('embalagem').value) > 0,
   };
 }
+
+function budgetItens(d) {
+  const itens = [];
+  if (d.modelado) {
+    itens.push('Modelagem 3D exclusiva: modelo criado do zero a partir da sua ideia/referência (complexidade '
+      + pinturaLabel(d.nivelModelagem).toLowerCase() + '), com até 2 rodadas de ajuste');
+  }
+  itens.push('Impressão 3D em PLA: cerca de ' + d.tempoPeca + ' de impressão por peça');
+  if (d.acabamento) itens.push('Acabamento manual: remoção de suportes e lixamento');
+  if (d.pintura) itens.push('Pintura à mão (' + pinturaLabel(d.pintura).toLowerCase() + '): primer, tinta acrílica e verniz');
+  if (d.embalagem) itens.push('Embalagem para proteção no transporte');
+  return itens;
+}
+
+function budgetValores(d) {
+  const linhas = [];
+  if (d.modelado) linhas.push(['Modelagem exclusiva (pagamento único)', fmtR(d.modelagem)]);
+  linhas.push([d.quantidade > 1 ? d.quantidade + ' peças × ' + fmtR(d.valorPeca) : '1 peça', fmtR(d.subtotalPecas)]);
+  return linhas;
+}
+
+const NOTA_MODELAGEM = 'A modelagem é cobrada uma única vez. Novos pedidos desta mesma peça pagam apenas o valor por peça.';
 
 function budgetText(d) {
   return [
     'HUY IDEIAS - ORÇAMENTO',
     '',
     'Cliente: ' + d.cliente,
-    'Produto personalizado: ' + d.produto,
-    ...(d.modelado ? ['Modelo: criado exclusivamente para você (modelagem 3D)'] : []),
-    'Acabamento: limpeza da peça',
-    ...(d.pintura ? ['Pintura: ' + pinturaLabel(d.pintura)] : []),
+    'Produto: ' + d.produto,
     'Quantidade: ' + d.quantidade,
-    ...(d.quantidade > 1 ? ['Valor por peça: ' + fmtR(d.unitario)] : []),
+    '',
+    'O QUE ESTÁ INCLUSO',
+    ...budgetItens(d).map(i => '- ' + i),
+    '',
+    'VALORES',
+    ...budgetValores(d).map(([a, b]) => a + ': ' + b),
     'Valor total: ' + fmtR(d.total),
+    ...(d.modelado ? ['', NOTA_MODELAGEM] : []),
     '',
     VALOR_TRABALHO_FRASE,
     '',
@@ -738,13 +832,14 @@ function openBudget() {
     <img class="budget-logo" src="${logoUrl}" alt="Huy Ideias">
     <h3>Huy Ideias - Orçamento</h3>
     <div><strong>Cliente:</strong> ${escapeHtml(d.cliente)}</div>
-    <div><strong>Produto personalizado:</strong> ${escapeHtml(d.produto)}</div>
-    ${d.modelado ? '<div><strong>Modelo:</strong> criado exclusivamente para você (modelagem 3D)</div>' : ''}
-    <div><strong>Acabamento:</strong> limpeza da peça</div>
-    ${d.pintura ? `<div><strong>Pintura:</strong> ${pinturaLabel(d.pintura)}</div>` : ''}
+    <div><strong>Produto:</strong> ${escapeHtml(d.produto)}</div>
     <div><strong>Quantidade:</strong> ${d.quantidade}</div>
-    ${d.quantidade > 1 ? `<div><strong>Valor por peça:</strong> ${fmtR(d.unitario)}</div>` : ''}
+    <div class="budget-sec">O que está incluso</div>
+    <ul class="budget-list">${budgetItens(d).map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
+    <div class="budget-sec">Valores</div>
+    ${budgetValores(d).map(([a, b]) => `<div class="budget-row"><span>${escapeHtml(a)}</span><span>${b}</span></div>`).join('')}
     <div class="budget-total">Valor total: ${fmtR(d.total)}</div>
+    ${d.modelado ? `<div class="budget-note">${NOTA_MODELAGEM}</div>` : ''}
     <div style="margin-top:12px;font-style:italic;color:#555">${VALOR_TRABALHO_FRASE}</div>
     <div style="margin-top:8px">Produção iniciada após a confirmação do pedido.</div>`;
   id('budget-overlay').classList.add('open');
@@ -772,7 +867,7 @@ function printBudget() {
     <title>Orçamento - Huy Ideias</title>
     <style>body{font-family:Arial,sans-serif;padding:40px;color:#222;line-height:1.6}
     h3{font-size:24px}.budget-logo{display:block;width:180px;margin-bottom:18px}
-    .budget-total{font-size:22px;font-weight:bold;margin-top:12px}</style>
+    .budget-total{font-size:22px;font-weight:bold;margin-top:12px}.budget-sec{margin-top:14px;font-weight:bold;text-transform:uppercase;font-size:13px}.budget-row{display:flex;justify-content:space-between;border-bottom:1px dashed #ccc;padding:3px 0}.budget-note{margin-top:10px;padding:8px;border-left:3px solid #00a888;background:#f2f2f2}</style>
     </head><body>${conteudo}</body></html>`);
   janela.document.close();
   janela.focus();
@@ -796,19 +891,20 @@ function controlText() {
     'Cliente: ' + (id('cliente').value.trim() || 'Não informado'),
     'Produto: ' + (id('nome').value.trim() || 'Não informado'),
     'Quantidade: ' + quantidade,
-    'Tempo por unidade: ' + id('tempo').value + ' h',
-    'Tempo estimado total: ' + fmtNumber((+id('tempo').value || 0) * quantidade) + ' h',
+    'Tempo por unidade: ' + id('tempo').value + ' (' + fmtNumber(parseTempo(id('tempo').value)) + ' h)',
+    'Tempo estimado total: ' + fmtNumber(parseTempo(id('tempo').value) * quantidade) + ' h',
     'Peso por unidade: ' + id('peso').value + ' g',
-    'Peso estimado total: ' + fmtNumber((+id('peso').value || 0) * quantidade) + ' g',
+    'Peso estimado total: ' + fmtNumber(parseNum(id('peso').value) * quantidade) + ' g',
     'Filamento: ' + fmtR(+id('filamento_kg').value || 0) + '/kg',
     'Embalagem por unidade: ' + fmtR(+id('embalagem').value || 0),
     'Outros custos por unidade: ' + fmtR(+id('taxa_extra').value || 0),
-    'Mão de obra: ' + id('mdo_horas').value + ' h a ' + fmtR(+id('mdo_valor').value || 0) + '/h',
+    'Tipo de produto: ' + tipoLabel(),
+    'Acabamento (limpeza/lixamento): ' + id('mdo_horas').value + ' h a ' + fmtR(+id('mdo_valor').value || 0) + '/h',
     'Origem do modelo: ' + (origem === 'modelado'
-      ? 'Modelado por mim (' + id('modelagem_horas').value + ' h de modelagem)'
-      : 'Baixado (arquivo/licença: ' + fmtR(+id('arquivo_custo').value || 0) + ')'),
+      ? 'Modelagem sob encomenda (nível ' + pinturaLabel(nivelModelagem) + ', ' + id('modelagem_horas').value + ' h a ' + fmtR(parseNum(id('modelagem_valor_hora').value)) + '/h + ferramentas ' + fmtR(parseNum(id('ia_taxa').value)) + ')'
+      : 'Modelo pronto (arquivo/licença: ' + fmtR(+id('arquivo_custo').value || 0) + ')'),
     'Pintura: ' + (pintura === 'none' ? 'Sem pintura' : pinturaLabel(pintura)),
-    ...(pintura !== 'none' ? ['Horas de pintura: ' + id('pintura_horas').value + ' h'] : []),
+    ...(pintura !== 'none' ? ['Horas de pintura: ' + id('pintura_horas').value + ' h a ' + fmtR(parseNum(id('pintura_valor_hora').value)) + '/h'] : []),
     'Markup: ' + id('markup').value,
     '',
     'CUSTOS CALCULADOS',
@@ -817,7 +913,7 @@ function controlText() {
     'Depreciação: ' + fmtR(lastResult.deprec),
     'Consumíveis: ' + fmtR(lastResult.consumiveis),
     'Embalagem: ' + fmtR(lastResult.embalagem),
-    'Mão de obra: ' + fmtR(lastResult.mdo_imp),
+    'Acabamento: ' + fmtR(lastResult.mdo_imp),
     'Custo fixo dissolvido: ' + fmtR(lastResult.fixo_diss),
     'Pintura: ' + fmtR(lastResult.pintura),
     'Risco / Falhas: ' + fmtR(lastResult.risco),
@@ -825,7 +921,7 @@ function controlText() {
     ...(lastResult.origem === 'modelado'
       ? ['Modelagem (por pedido): ' + fmtR(lastResult.projeto)
           + ' = mão de obra ' + fmtR(lastResult.modelagem_mdo)
-          + ' + ferramentas/IA ' + fmtR(lastResult.modelagem_ferramentas)]
+          + ' + ferramentas IA ' + fmtR(lastResult.modelagem_ferramentas)]
       : ['Arquivo / licença (por pedido): ' + fmtR(lastResult.projeto)]),
     'Custo total: ' + fmtR(lastResult.custo_total),
     '',
@@ -861,6 +957,26 @@ function fmt(v) {
   return v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 function fmtR(v) { return 'R$ ' + fmt(v); }
+// Aceita "32,05" ou "32.05"
+function parseNum(texto) {
+  const n = parseFloat(String(texto || '').trim().replace(/\s/g, '').replace(',', '.'));
+  return isFinite(n) && n > 0 ? n : 0;
+}
+// Aceita o formato do Bambu Studio: "2h19m", "46m27s", "2h", "1d3h"; ou horas decimais "2,5"; ou "2:19"
+function parseTempo(texto) {
+  const t = String(texto || '').toLowerCase().replace(/\s/g, '');
+  if (!t) return 0;
+  if (/^\d+:\d{1,2}$/.test(t)) { const [h, m] = t.split(':').map(Number); return h + m / 60; }
+  if (/[dhms]/.test(t)) {
+    const pega = (u) => { const m = t.match(new RegExp('(\\d+(?:[.,]\\d+)?)' + u)); return m ? parseFloat(m[1].replace(',', '.')) : 0; };
+    return pega('d') * 24 + pega('h') + pega('m') / 60 + pega('s') / 3600;
+  }
+  return parseNum(t);
+}
+function fmtTempo(horas) {
+  const h = Math.floor(horas), m = Math.round((horas - h) * 60);
+  return (h ? h + 'h' : '') + (m ? String(m).padStart(h ? 2 : 1, '0') + 'min' : (h ? '' : '0min'));
+}
 function fmtNumber(v) {
   return Number(v).toFixed(2).replace('.', ',');
 }
@@ -868,6 +984,10 @@ function isoDate() { return new Date().toISOString().slice(0, 10); }
 function safeFilename(texto) {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'produto';
+}
+function tipoLabel() {
+  return (origem === 'modelado' ? 'Modelagem sob encomenda' : 'Modelo pronto')
+    + ' + Impressão' + (pintura !== 'none' ? ' + Pintura (' + pinturaLabel(pintura) + ')' : '');
 }
 function pinturaLabel(valor) {
   return {simples: 'Simples', media: 'Média', complexa: 'Complexa'}[valor] || valor;
@@ -880,6 +1000,13 @@ function escapeHtml(texto) {
 function unitSuffix(v, quantidade) {
   return quantidade > 1 ? ' (' + fmtR(v) + '/un.)' : '';
 }
+
+// Valores iniciais vindos do config.js (editáveis na tela)
+id('modelagem_valor_hora').value = String(valor('VALOR_HORA_MODELAGEM', 20)).replace('.', ',');
+id('ia_taxa').value = String(valor('TAXA_FERRAMENTAS_IA_POR_PROJETO', 20)).replace('.', ',');
+id('pintura_valor_hora').value = String(valor('MAO_DE_OBRA_PINTURA_POR_HORA', 10)).replace('.', ',');
+id('modelagem_horas').value = String(HORAS_MODELAGEM_SUGERIDAS.simples).replace('.', ',');
+id('pintura_horas').value = String(HORAS_PINTURA_SUGERIDAS.simples).replace('.', ',');
 
 // Calcula na carga
 doCalc();
