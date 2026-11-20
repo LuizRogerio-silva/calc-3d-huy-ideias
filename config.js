@@ -17,6 +17,13 @@ const CONFIG = {
   CONSUMO_PINTURA_COMPLEXA_PCT: 20,
   MAO_DE_OBRA_PINTURA_POR_HORA: 10,
 
+  // MODELAGEM 3D (cobrada uma vez por pedido, sem markup)
+  VALOR_HORA_MODELAGEM: 30,
+  // Soma das assinaturas usadas para modelar (ChatGPT, Claude, Tripo3D...)
+  FERRAMENTAS_IA_MENSAL: 0,
+  // Quantas horas por mês você costuma modelar (para dividir as assinaturas)
+  HORAS_MODELAGEM_MENSAIS: 40,
+
   RISCO_FALHAS_PCT: 10,
 
   CUSTO_KWH: 0.88,

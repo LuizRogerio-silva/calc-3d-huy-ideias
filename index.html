@@ -339,6 +339,45 @@ option { background: #16181f; }
       </div>
     </div>
 
+    <!-- Origem do modelo -->
+    <div class="section">
+      <div class="section-lbl">Origem do Modelo</div>
+      <div class="toggle-row" id="otoggle">
+        <div class="tbtn active" data-val="baixado"  onclick="setOrigem(this)">Baixado (MakerWorld etc.)</div>
+        <div class="tbtn"        data-val="modelado" onclick="setOrigem(this)">Modelado por mim</div>
+      </div>
+      <div id="origem-baixado">
+        <div class="field">
+          <label>Custo do Arquivo / Licença (por pedido)</label>
+          <div class="iw">
+            <div class="pfx">R$</div>
+            <input type="number" id="arquivo_custo" value="0" min="0" step="1" oninput="calc()">
+          </div>
+        </div>
+      </div>
+      <div id="origem-modelado" style="display:none">
+        <div class="grid2">
+          <div class="field">
+            <label>Horas de Modelagem (por pedido)</label>
+            <div class="iw">
+              <input type="number" id="modelagem_horas" value="2" min="0" step="0.5" oninput="calc()">
+              <div class="sfx">h</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Créditos de IA neste projeto</label>
+            <div class="iw">
+              <div class="pfx">R$</div>
+              <input type="number" id="ia_extra" value="0" min="0" step="1" oninput="calc()">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sub" style="margin-top:8px">
+        Cobrado uma vez por pedido, sem markup. Valor da hora e assinaturas de IA em config.js.
+      </div>
+    </div>
+
     <!-- Mão de obra impressão -->
     <div class="section">
       <div class="section-lbl">Mão de Obra — Impressão</div>
@@ -423,6 +462,9 @@ option { background: #16181f; }
       <div class="bi" id="r-pintura-row" style="display:none">
         <span class="bn">Pintura</span><span class="bv" id="r-pintura">—</span>
       </div>
+      <div class="bi" id="r-projeto-row" style="display:none">
+        <span class="bn" id="r-projeto-lbl">Modelagem</span><span class="bv" id="r-projeto">—</span>
+      </div>
       <div class="bi"><span class="bn">Risco / Falhas</span><span class="bv" id="r-risco">—</span></div>
       <div class="bi"><span class="bn">Taxa extra</span><span class="bv" id="r-taxa">—</span></div>
       <div class="bi sep"><span class="bn">Custo Total</span><span class="bv" id="r-custo">—</span></div>
@@ -456,6 +498,7 @@ option { background: #16181f; }
 <script src="config.js"></script>
 <script>
 let pintura = 'none';
+let origem = 'baixado';
 let debounce;
 let lastResult = null;
 const logoUrl = "static/logo-loja.jpeg";
@@ -479,6 +522,10 @@ function doCalc() {
     pintura_horas:+id('pintura_horas').value || 0,
     markup:      +id('markup').value      || 1,
     taxa_extra:  +id('taxa_extra').value  || 0,
+    origem,
+    arquivo_custo:   +id('arquivo_custo').value   || 0,
+    modelagem_horas: +id('modelagem_horas').value || 0,
+    ia_extra:        +id('ia_extra').value        || 0,
   };
 
   renderResult(calcular(payload));
@@ -549,8 +596,25 @@ function calcular(dados) {
 
   const taxaShopee = valor('PERCENTUAL_SHOPEE', 20) / 100;
   const taxaMl = valor('PERCENTUAL_MERCADO_LIVRE', 19) / 100;
-  const shopeeUnit = (precoUnit + valor('TAXA_FIXA_SHOPEE', 7)) / (1 - taxaShopee);
-  const mlUnit = precoUnit / (1 - taxaMl);
+  // Origem do modelo: valor por PEDIDO (não multiplica pela quantidade, sem markup).
+  let projeto = 0;
+  let modelagemMdo = 0;
+  let modelagemFerramentas = 0;
+  if (dados.origem === 'modelado') {
+    const horasModelagem = +dados.modelagem_horas || 0;
+    const horasMesModelagem = valor('HORAS_MODELAGEM_MENSAIS', 40) || 1;
+    modelagemMdo = horasModelagem * valor('VALOR_HORA_MODELAGEM', 30);
+    modelagemFerramentas = horasModelagem * (valor('FERRAMENTAS_IA_MENSAL', 0) / horasMesModelagem)
+      + (+dados.ia_extra || 0);
+    projeto = modelagemMdo + modelagemFerramentas;
+  } else {
+    projeto = +dados.arquivo_custo || 0;
+  }
+
+  const precoTotal = precoUnit * quantidade + projeto;
+  const custoTotal = custoTotalUnit * quantidade + projeto;
+  const shopeeTotal = ((precoUnit + valor('TAXA_FIXA_SHOPEE', 7)) * quantidade + projeto) / (1 - taxaShopee);
+  const mlTotal = (precoUnit * quantidade + projeto) / (1 - taxaMl);
 
   return {
     material: r2(material * quantidade),
@@ -563,15 +627,19 @@ function calcular(dados) {
     pintura: r2(custoPintura * quantidade),
     taxa_extra: r2(taxaExtra * quantidade),
     risco: r2(risco * quantidade),
-    custo_total: r2(custoTotalUnit * quantidade),
-    preco: r2(precoUnit * quantidade),
+    projeto: r2(projeto),
+    modelagem_mdo: r2(modelagemMdo),
+    modelagem_ferramentas: r2(modelagemFerramentas),
+    origem: dados.origem,
+    custo_total: r2(custoTotal),
+    preco: r2(precoTotal),
     lucro: r2(lucroUnit * quantidade),
-    shopee: r2(shopeeUnit * quantidade),
-    ml: r2(mlUnit * quantidade),
+    shopee: r2(shopeeTotal),
+    ml: r2(mlTotal),
     quantidade,
-    preco_unitario: r2(precoUnit),
-    shopee_unitario: r2(shopeeUnit),
-    ml_unitario: r2(mlUnit),
+    preco_unitario: r2(precoTotal / quantidade),
+    shopee_unitario: r2(shopeeTotal / quantidade),
+    ml_unitario: r2(mlTotal / quantidade),
   };
 }
 
@@ -598,10 +666,25 @@ function renderResult(d) {
   id('r-ml').textContent          = fmtR(d.ml) + unitSuffix(d.ml_unitario, d.quantidade);
 
   // Margem
-  const margem = d.preco > 0 ? ((d.lucro / d.preco) * 100).toFixed(1) : '0.0';
+  // Margem só sobre a impressão (modelagem/arquivo é repasse, sem markup)
+  const precoImpressao = d.preco - d.projeto;
+  const margem = precoImpressao > 0 ? ((d.lucro / precoImpressao) * 100).toFixed(1) : '0.0';
   id('margem_display').value = margem;
 
   id('r-pintura-row').style.display = pintura !== 'none' ? 'flex' : 'none';
+  id('r-projeto').textContent = fmtR(d.projeto);
+  id('r-projeto-lbl').textContent = d.origem === 'modelado' ? 'Modelagem 3D' : 'Arquivo / Licença';
+  id('r-projeto-row').style.display = (d.origem === 'modelado' || d.projeto > 0) ? 'flex' : 'none';
+}
+
+// ── Origem do modelo ──────────────────────────────────────────
+function setOrigem(el) {
+  document.querySelectorAll('#otoggle .tbtn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  origem = el.dataset.val;
+  id('origem-baixado').style.display = origem === 'baixado' ? 'block' : 'none';
+  id('origem-modelado').style.display = origem === 'modelado' ? 'block' : 'none';
+  calc();
 }
 
 // ── Pintura ───────────────────────────────────────────────────
@@ -625,6 +708,7 @@ function budgetData() {
     total: lastResult.preco,
     unitario: lastResult.preco_unitario,
     pintura: pintura === 'none' ? '' : pintura,
+    modelado: lastResult.origem === 'modelado',
   };
 }
 
@@ -634,6 +718,7 @@ function budgetText(d) {
     '',
     'Cliente: ' + d.cliente,
     'Produto personalizado: ' + d.produto,
+    ...(d.modelado ? ['Modelo: criado exclusivamente para você (modelagem 3D)'] : []),
     'Acabamento: limpeza da peça',
     ...(d.pintura ? ['Pintura: ' + pinturaLabel(d.pintura)] : []),
     'Quantidade: ' + d.quantidade,
@@ -654,6 +739,7 @@ function openBudget() {
     <h3>Huy Ideias - Orçamento</h3>
     <div><strong>Cliente:</strong> ${escapeHtml(d.cliente)}</div>
     <div><strong>Produto personalizado:</strong> ${escapeHtml(d.produto)}</div>
+    ${d.modelado ? '<div><strong>Modelo:</strong> criado exclusivamente para você (modelagem 3D)</div>' : ''}
     <div><strong>Acabamento:</strong> limpeza da peça</div>
     ${d.pintura ? `<div><strong>Pintura:</strong> ${pinturaLabel(d.pintura)}</div>` : ''}
     <div><strong>Quantidade:</strong> ${d.quantidade}</div>
@@ -697,8 +783,9 @@ function printBudget() {
 function controlText() {
   if (!lastResult) return '';
   const quantidade = lastResult.quantidade;
-  const margem = lastResult.preco > 0
-    ? (lastResult.lucro / lastResult.preco * 100).toFixed(1).replace('.', ',')
+  const precoImpressao = lastResult.preco - lastResult.projeto;
+  const margem = precoImpressao > 0
+    ? (lastResult.lucro / precoImpressao * 100).toFixed(1).replace('.', ',')
     : '0,0';
   return [
     'HUY IDEIAS - CONTROLE INTERNO',
@@ -717,6 +804,9 @@ function controlText() {
     'Embalagem por unidade: ' + fmtR(+id('embalagem').value || 0),
     'Outros custos por unidade: ' + fmtR(+id('taxa_extra').value || 0),
     'Mão de obra: ' + id('mdo_horas').value + ' h a ' + fmtR(+id('mdo_valor').value || 0) + '/h',
+    'Origem do modelo: ' + (origem === 'modelado'
+      ? 'Modelado por mim (' + id('modelagem_horas').value + ' h de modelagem)'
+      : 'Baixado (arquivo/licença: ' + fmtR(+id('arquivo_custo').value || 0) + ')'),
     'Pintura: ' + (pintura === 'none' ? 'Sem pintura' : pinturaLabel(pintura)),
     ...(pintura !== 'none' ? ['Horas de pintura: ' + id('pintura_horas').value + ' h'] : []),
     'Markup: ' + id('markup').value,
@@ -732,6 +822,11 @@ function controlText() {
     'Pintura: ' + fmtR(lastResult.pintura),
     'Risco / Falhas: ' + fmtR(lastResult.risco),
     'Outros custos: ' + fmtR(lastResult.taxa_extra),
+    ...(lastResult.origem === 'modelado'
+      ? ['Modelagem (por pedido): ' + fmtR(lastResult.projeto)
+          + ' = mão de obra ' + fmtR(lastResult.modelagem_mdo)
+          + ' + ferramentas/IA ' + fmtR(lastResult.modelagem_ferramentas)]
+      : ['Arquivo / licença (por pedido): ' + fmtR(lastResult.projeto)]),
     'Custo total: ' + fmtR(lastResult.custo_total),
     '',
     'PREÇOS E RESULTADO',
@@ -742,7 +837,7 @@ function controlText() {
     'Mercado Livre - total: ' + fmtR(lastResult.ml),
     'Mercado Livre - unidade: ' + fmtR(lastResult.ml_unitario),
     'Lucro estimado: ' + fmtR(lastResult.lucro),
-    'Margem: ' + margem + '%',
+    'Margem (impressão): ' + margem + '%',
     '',
   ].join('\r\n');
 }
