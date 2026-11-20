@@ -299,7 +299,7 @@ option { background: #16181f; }
     <div class="field" style="margin-bottom:14px">
       <label>Quantidade</label>
       <div class="iw">
-        <input type="number" id="quantidade" value="1" min="1" step="1" oninput="calc()">
+        <input type="number" id="quantidade" value="1" min="1" step="1" oninput="atualizaDesconto(); calc()">
         <div class="sfx">un.</div>
       </div>
     </div>
@@ -456,7 +456,7 @@ option { background: #16181f; }
     <!-- Precificação -->
     <div class="section">
       <div class="section-lbl">Precificação</div>
-      <div class="grid2">
+      <div class="grid3">
         <div class="field">
           <label>Markup</label>
           <div class="iw">
@@ -471,7 +471,15 @@ option { background: #16181f; }
             <div class="sfx">%</div>
           </div>
         </div>
+        <div class="field">
+          <label>Desconto por Quantidade</label>
+          <div class="iw">
+            <input type="text" id="desconto_pct" value="0" inputmode="decimal" oninput="calc()">
+            <div class="sfx">%</div>
+          </div>
+        </div>
       </div>
+      <div class="sub" style="margin-top:6px" id="desconto_hint">Preenchido automaticamente pela quantidade (faixas em config.js). Pode ajustar para negociar.</div>
     </div>
 
   </div><!-- /panel -->
@@ -501,6 +509,7 @@ option { background: #16181f; }
       </div>
       <div class="bi"><span class="bn">Risco / Falhas</span><span class="bv" id="r-risco">—</span></div>
       <div class="bi"><span class="bn">Taxa extra</span><span class="bv" id="r-taxa">—</span></div>
+      <div class="bi" id="r-desc-row" style="display:none"><span class="bn" id="r-desc-lbl">Desconto quantidade</span><span class="bv" id="r-desc" style="color:#ff8a65">—</span></div>
       <div class="bi sep"><span class="bn">Custo Total</span><span class="bv" id="r-custo">—</span></div>
       <div class="bi hi"><span class="bn">Lucro Líquido</span><span class="bv" id="r-lucro">—</span></div>
     </div>
@@ -556,6 +565,7 @@ function doCalc() {
     pintura_horas: parseNum(id('pintura_horas').value),
     pintura_valor_hora: parseNum(id('pintura_valor_hora').value),
     markup:      +id('markup').value      || 1,
+    desconto_pct: parseNum(id('desconto_pct').value),
     taxa_extra:  +id('taxa_extra').value  || 0,
     origem,
     arquivo_custo:   parseNum(id('arquivo_custo').value),
@@ -627,7 +637,11 @@ function calcular(dados) {
   const subtotal = custoDireto + fixoDiss + custoPintura + taxaExtra;
   const risco = subtotal * (valor('RISCO_FALHAS_PCT', 10) / 100);
   const custoTotalUnit = subtotal + risco;
-  const precoUnit = custoTotalUnit * markup;
+  const precoCheioUnit = custoTotalUnit * markup;
+  // Desconto por quantidade: sai do lucro, nunca deixa o preço abaixo do custo
+  const descontoPct = Math.min(Math.max(+dados.desconto_pct || 0, 0), 100);
+  const precoUnit = Math.max(custoTotalUnit, precoCheioUnit * (1 - descontoPct / 100));
+  const descontoUnit = precoCheioUnit - precoUnit;
   const lucroUnit = precoUnit - custoTotalUnit;
 
   const taxaShopee = valor('PERCENTUAL_SHOPEE', 20) / 100;
@@ -672,6 +686,10 @@ function calcular(dados) {
     quantidade,
     preco_unitario: r2(precoTotal / quantidade),
     preco_peca: r2(precoUnit),
+    preco_peca_cheio: r2(precoCheioUnit),
+    desconto: r2(descontoUnit * quantidade),
+    desconto_pct: descontoPct,
+    desconto_limitado: descontoUnit < precoCheioUnit * descontoPct / 100 - 0.005,
     shopee_unitario: r2(shopeeTotal / quantidade),
     ml_unitario: r2(mlTotal / quantidade),
   };
@@ -694,6 +712,12 @@ function renderResult(d) {
   id('r-pintura').textContent     = fmtR(d.pintura);
   id('r-risco').textContent       = fmtR(d.risco);
   id('r-taxa').textContent        = fmtR(d.taxa_extra);
+  id('r-desc-row').style.display = d.desconto > 0 ? 'flex' : 'none';
+  id('r-desc-lbl').textContent = 'Desconto quantidade (' + fmtNumber(d.desconto_pct).replace(',00', '') + '%)';
+  id('r-desc').textContent = '− ' + fmtR(d.desconto);
+  id('desconto_hint').textContent = d.desconto_limitado
+    ? 'Atenção: desconto limitado para o preço não ficar abaixo do custo.'
+    : 'Preenchido automaticamente pela quantidade (faixas em config.js). Pode ajustar para negociar.';
   id('r-custo').textContent       = fmtR(d.custo_total);
   id('r-lucro').textContent       = fmtR(d.lucro);
   id('r-direto').textContent      = fmtR(d.preco) + unitSuffix(d.preco_unitario, d.quantidade);
@@ -710,6 +734,17 @@ function renderResult(d) {
   id('r-projeto').textContent = fmtR(d.projeto);
   id('r-projeto-lbl').textContent = d.origem === 'modelado' ? 'Modelagem sob encomenda' : 'Arquivo / Licença';
   id('r-projeto-row').style.display = (d.origem === 'modelado' || d.projeto > 0) ? 'flex' : 'none';
+}
+
+// ── Desconto por quantidade ───────────────────────────────────
+function descontoPorQuantidade(q) {
+  const faixas = (CONFIG.DESCONTO_QUANTIDADE || []).slice().sort((a, b) => b.min - a.min);
+  const f = faixas.find(x => q >= x.min);
+  return f ? f.pct : 0;
+}
+function atualizaDesconto() {
+  const q = Math.max(1, parseInt(id('quantidade').value || 1, 10));
+  id('desconto_pct').value = String(descontoPorQuantidade(q)).replace('.', ',');
 }
 
 // ── Tipo de produto e pintura ─────────────────────────────────
@@ -760,20 +795,22 @@ const VALOR_TRABALHO_FRASE = 'Peça impressa em 3D artesanalmente, com acabament
 
 function budgetData() {
   if (!lastResult) return null;
-  const modelado = lastResult.origem === 'modelado';
-  const q = lastResult.quantidade;
-  // Na sob encomenda a modelagem aparece separada (pagamento único)
-  const valorPeca = modelado ? lastResult.preco_peca : lastResult.preco_unitario;
+  const r = lastResult;
+  const q = r.quantidade;
   return {
     cliente: id('cliente').value.trim() || 'Cliente',
     produto: id('nome').value.trim() || 'Produto personalizado',
     quantidade: q,
-    total: lastResult.preco,
-    valorPeca,
-    subtotalPecas: modelado ? r2(lastResult.preco_peca * q) : lastResult.preco,
-    modelagem: modelado ? lastResult.projeto : 0,
+    total: r.preco,
+    valorPecaCheio: r.preco_peca_cheio,
+    valorPeca: r.preco_peca,
+    subtotalPecas: r2(r.preco_peca_cheio * q),
+    // derivado para as linhas do orçamento fecharem exatamente com o total
+    desconto: r.desconto > 0 ? r2(r2(r.preco_peca_cheio * q) + r.projeto - r.preco) : 0,
+    descontoPct: r.desconto_pct,
+    projeto: r.projeto,
     pintura: pintura === 'none' ? '' : pintura,
-    modelado,
+    modelado: r.origem === 'modelado',
     nivelModelagem,
     tempoPeca: fmtTempo(parseTempo(id('tempo').value)),
     acabamento: parseNum(id('mdo_horas').value) > 0,
@@ -796,8 +833,10 @@ function budgetItens(d) {
 
 function budgetValores(d) {
   const linhas = [];
-  if (d.modelado) linhas.push(['Modelagem exclusiva (pagamento único)', fmtR(d.modelagem)]);
-  linhas.push([d.quantidade > 1 ? d.quantidade + ' peças × ' + fmtR(d.valorPeca) : '1 peça', fmtR(d.subtotalPecas)]);
+  if (d.modelado) linhas.push(['Modelagem exclusiva (pagamento único)', fmtR(d.projeto)]);
+  else if (d.projeto > 0) linhas.push(['Licença do modelo', fmtR(d.projeto)]);
+  linhas.push([d.quantidade > 1 ? d.quantidade + ' peças × ' + fmtR(d.valorPecaCheio) : '1 peça', fmtR(d.subtotalPecas)]);
+  if (d.desconto > 0) linhas.push(['Desconto por quantidade (' + fmtNumber(d.descontoPct).replace(',00', '') + '%)', '− ' + fmtR(d.desconto)]);
   return linhas;
 }
 
@@ -817,6 +856,7 @@ function budgetText(d) {
     'VALORES',
     ...budgetValores(d).map(([a, b]) => a + ': ' + b),
     'Valor total: ' + fmtR(d.total),
+    ...(d.quantidade > 1 ? ['Valor por peça com desconto: ' + fmtR(d.valorPeca)] : []).filter(() => d.desconto > 0),
     ...(d.modelado ? ['', NOTA_MODELAGEM] : []),
     '',
     VALOR_TRABALHO_FRASE,
@@ -839,6 +879,7 @@ function openBudget() {
     <div class="budget-sec">Valores</div>
     ${budgetValores(d).map(([a, b]) => `<div class="budget-row"><span>${escapeHtml(a)}</span><span>${b}</span></div>`).join('')}
     <div class="budget-total">Valor total: ${fmtR(d.total)}</div>
+    ${d.desconto > 0 && d.quantidade > 1 ? `<div style="color:#555">Cada peça sai por ${fmtR(d.valorPeca)} com o desconto.</div>` : ''}
     ${d.modelado ? `<div class="budget-note">${NOTA_MODELAGEM}</div>` : ''}
     <div style="margin-top:12px;font-style:italic;color:#555">${VALOR_TRABALHO_FRASE}</div>
     <div style="margin-top:8px">Produção iniciada após a confirmação do pedido.</div>`;
@@ -906,6 +947,7 @@ function controlText() {
     'Pintura: ' + (pintura === 'none' ? 'Sem pintura' : pinturaLabel(pintura)),
     ...(pintura !== 'none' ? ['Horas de pintura: ' + id('pintura_horas').value + ' h a ' + fmtR(parseNum(id('pintura_valor_hora').value)) + '/h'] : []),
     'Markup: ' + id('markup').value,
+    'Desconto por quantidade: ' + fmtNumber(lastResult.desconto_pct) + '%',
     '',
     'CUSTOS CALCULADOS',
     'Material: ' + fmtR(lastResult.material),
@@ -932,6 +974,7 @@ function controlText() {
     'Shopee - unidade: ' + fmtR(lastResult.shopee_unitario),
     'Mercado Livre - total: ' + fmtR(lastResult.ml),
     'Mercado Livre - unidade: ' + fmtR(lastResult.ml_unitario),
+    ...(lastResult.desconto > 0 ? ['Desconto concedido: ' + fmtR(lastResult.desconto)] : []),
     'Lucro estimado: ' + fmtR(lastResult.lucro),
     'Margem (impressão): ' + margem + '%',
     '',

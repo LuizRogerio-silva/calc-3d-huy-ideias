@@ -30,6 +30,14 @@ const CONFIG = {
   HORAS_PINTURA_MEDIA: 1,
   HORAS_PINTURA_COMPLEXA: 2,
 
+  // DESCONTO POR QUANTIDADE (a partir de "min" peças, "pct"% sobre o preço das peças)
+  // O desconto sai do lucro: o preço nunca fica abaixo do custo. Modelagem não tem desconto.
+  DESCONTO_QUANTIDADE: [
+    { min: 5,  pct: 5 },
+    { min: 10, pct: 10 },
+    { min: 20, pct: 15 },
+  ],
+
   RISCO_FALHAS_PCT: 10,
 
   CUSTO_KWH: 0.88,
